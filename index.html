@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Splendid Lucky Draw</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a; /* slate-900 */
+            color: #f8fafc;
+            /* Ensures natural scrolling without locking the page */
+            min-height: 100vh;
+        }
+
+        /* Glassmorphism panels */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.85); /* slate-800 with opacity */
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.7);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.3); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.5); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.8); }
+
+        /* Animations */
+        @keyframes pointer-bounce {
+            0%, 100% { transform: translateX(-50%) translateY(0); }
+            50% { transform: translateX(-50%) translateY(8px); }
+        }
+        .pointer-anim {
+            animation: pointer-bounce 1s ease-in-out infinite;
+        }
+        
+        @keyframes glow {
+            0%, 100% { filter: drop-shadow(0 0 15px rgba(250, 204, 21, 0.6)); }
+            50% { filter: drop-shadow(0 0 25px rgba(250, 204, 21, 1)); }
+        }
+        .text-glow {
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        /* Modal transitions */
+        .modal-enter {
+            opacity: 0;
+            transform: scale(0.9);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-enter-active {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* Toast Message */
+        .toast-enter {
+            animation: slideInDown 0.4s ease-out forwards;
+        }
+        @keyframes slideInDown {
+            from { transform: translate(-50%, -100%); opacity: 0; }
+            to { transform: translate(-50%, 0); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+    <!-- Toast Notification (Replaces alerts) -->
+    <div id="toast" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] bg-red-600 text-white px-6 py-3 rounded-full shadow-2xl font-bold tracking-wide opacity-0 pointer-events-none transition-opacity duration-300">
+        <span id="toastMsg">Message here</span>
+    </div>
+
+    <!-- Header Banner -->
+    <header class="relative w-full h-48 md:h-64 lg:h-72 shrink-0 border-b-4 border-yellow-500 shadow-[0_4px_20px_rgba(234,179,8,0.3)]">
+        <!-- Background Image Provided by User -->
+        <img src="494611_2.jpg" alt="Splendid Pickle KL Banner" class="absolute inset-0 w-full h-full object-cover opacity-70" onerror="this.src='https://placehold.co/1920x400/0f172a/facc15?text=Splendid+Lucky+Draw'">
+        
+        <!-- Dark Overlay for Contrast -->
+        <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/50 to-transparent"></div>
+        
+        <!-- Header Text -->
+        <div class="absolute inset-0 flex flex-col items-center justify-center p-4">
+            <h1 class="text-4xl md:text-6xl lg:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 via-yellow-400 to-amber-600 text-glow text-center uppercase tracking-tight italic drop-shadow-lg">
+                Splendid Lucky Draw
+            </h1>
+            <p class="text-white mt-2 font-bold tracking-widest uppercase opacity-90 drop-shadow-md">Play Splendid, Win Splendid</p>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="flex-grow container mx-auto px-4 py-8 lg:py-10 max-w-[1600px]">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <!-- ================= LEFT COLUMN: Player Pool ================= -->
+            <div class="glass-panel rounded-3xl p-6 lg:col-span-3 flex flex-col min-h-[500px]">
+                <h2 class="text-2xl font-black text-yellow-400 mb-4 flex items-center gap-2 uppercase tracking-wide">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                    Player Pool
+                </h2>
+                
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm text-slate-400 font-bold uppercase tracking-wider">Paste Names</span>
+                    <span id="poolCountBadge" class="bg-yellow-500/20 text-yellow-400 text-xs py-1 px-3 rounded-full font-black border border-yellow-500/50">0</span>
+                </div>
+                
+                <textarea 
+                    id="namesTextarea" 
+                    class="w-full flex-grow min-h-[300px] bg-slate-900 border-2 border-slate-700 rounded-xl p-4 text-slate-100 text-sm focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 transition-all resize-none mb-4 shadow-inner placeholder-slate-600 font-medium leading-relaxed"
+                    placeholder="John Doe&#10;Jane Smith&#10;Pickleball Pro..."></textarea>
+                
+                <button 
+                    id="loadBtn" 
+                    onclick="app.loadNames()" 
+                    class="w-full py-4 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl font-black uppercase tracking-wider transition-all shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.5)] active:scale-[0.98] flex items-center justify-center gap-2 border border-cyan-400/30">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    Load Names to Wheel
+                </button>
+            </div>
+
+            <!-- ================= CENTER COLUMN: The Wheel ================= -->
+            <div class="glass-panel rounded-3xl p-6 lg:col-span-6 flex flex-col items-center justify-center relative min-h-[500px]">
+                <h2 class="text-xl font-bold text-white mb-6 uppercase tracking-[0.3em] opacity-50">The Splendid Wheel</h2>
+                
+                <!-- Wheel Wrapper -->
+                <div class="relative w-full max-w-[500px] aspect-square mx-auto flex items-center justify-center">
+                    <!-- The Pointer -->
+                    <div class="absolute top-[-12px] left-1/2 transform -translate-x-1/2 z-30 pointer-anim drop-shadow-[0_5px_8px_rgba(0,0,0,0.9)]">
+                        <svg class="w-14 h-16 text-yellow-400 fill-current" viewBox="0 0 24 24" stroke="#000" stroke-width="1.5">
+                            <path d="M12 2L22 20H2L12 2Z" transform="rotate(180 12 12)" />
+                        </svg>
+                    </div>
+                    
+                    <!-- Center Hub -->
+                    <div class="absolute inset-0 m-auto w-16 h-16 rounded-full bg-slate-900 border-[5px] border-yellow-400 z-20 shadow-[inset_0_0_15px_rgba(0,0,0,0.8),0_0_25px_rgba(0,0,0,0.8)] flex items-center justify-center">
+                        <div class="w-4 h-4 bg-yellow-500 rounded-full shadow-[0_0_10px_#facc15]"></div>
+                    </div>
+
+                    <!-- HTML5 Canvas -->
+                    <canvas id="wheelCanvas" class="w-full h-full rounded-full drop-shadow-[0_0_40px_rgba(0,0,0,0.5)]"></canvas>
+                </div>
+
+                <!-- Spin Button -->
+                <div class="mt-10 w-full max-w-sm">
+                    <button 
+                        id="spinBtn" 
+                        onclick="app.spin()" 
+                        disabled
+                        class="w-full py-5 text-4xl font-black text-slate-900 uppercase tracking-[0.2em] transition-all duration-300 bg-gradient-to-b from-yellow-300 via-yellow-400 to-amber-500 rounded-2xl hover:from-yellow-200 hover:to-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.4)] hover:shadow-[0_0_50px_rgba(245,158,11,0.7)] active:scale-[0.96] disabled:opacity-40 disabled:cursor-not-allowed border-2 border-yellow-200">
+                        SPIN!
+                    </button>
+                </div>
+            </div>
+
+            <!-- ================= RIGHT COLUMN: History ================= -->
+            <div class="glass-panel rounded-3xl p-6 lg:col-span-3 flex flex-col min-h-[500px]">
+                
+                <!-- Current Winners -->
+                <div class="flex flex-col flex-grow mb-6 h-1/2">
+                    <div class="flex justify-between items-center mb-3">
+                        <h2 class="text-lg font-black text-emerald-400 flex items-center gap-2 uppercase tracking-wide">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path></svg>
+                            Current Session
+                        </h2>
+                        <span id="currentWinnersCount" class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold">0</span>
+                    </div>
+                    
+                    <div class="flex-grow bg-slate-900 rounded-xl border border-slate-700 p-2 overflow-y-auto max-h-[300px] shadow-inner">
+                        <ul id="currentWinnersList" class="space-y-2">
+                            <li class="text-center text-slate-500 text-sm mt-8 italic font-medium" id="emptyWinnersMsg">No winners drawn yet.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Save Session Button -->
+                <button 
+                    id="saveSessionBtn" 
+                    onclick="app.saveSession()" 
+                    class="w-full py-3 mb-6 bg-slate-800 hover:bg-emerald-900/60 text-slate-300 hover:text-emerald-400 rounded-xl font-bold uppercase tracking-wider transition-all border border-slate-600 hover:border-emerald-500 flex items-center justify-center gap-2 shadow-md">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                    Save & Reset Session
+                </button>
+
+                <!-- Past Sessions -->
+                <div class="flex flex-col border-t border-slate-700/50 pt-5 h-1/2">
+                    <h2 class="text-lg font-black text-cyan-400 mb-3 flex items-center gap-2 uppercase tracking-wide">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Past Sessions
+                    </h2>
+                    
+                    <div id="pastSessionsContainer" class="space-y-3 overflow-y-auto max-h-[300px] pr-1 pb-4">
+                        <div class="text-center text-slate-500 text-sm mt-4 italic font-medium" id="emptySessionsMsg">No saved sessions yet.</div>
+                        <!-- Session accordions injected here -->
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- ================= WINNER MODAL ================= -->
+    <div id="winnerModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-300">
+        <div id="winnerModalContent" class="modal-enter bg-slate-900 border-4 border-yellow-500 p-8 md:p-12 rounded-3xl shadow-[0_0_100px_rgba(234,179,8,0.5)] max-w-lg w-full mx-4 text-center">
+            
+            <h3 class="text-2xl md:text-3xl font-black text-yellow-500 uppercase tracking-[0.2em] mb-4">Winner!</h3>
+            
+            <div class="py-10 bg-slate-950/80 rounded-2xl mb-8 border border-slate-800 shadow-[inset_0_0_30px_rgba(0,0,0,0.8)]">
+                <p id="modalWinnerName" class="text-4xl md:text-5xl lg:text-6xl font-black text-white drop-shadow-[0_2px_20px_rgba(255,255,255,0.8)] break-words px-4 leading-tight">
+                    <!-- Winner Name Injected Here -->
+                </p>
+            </div>
+            
+            <button 
+                onclick="app.closeWinnerModal()" 
+                class="w-full py-4 text-xl bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-300 hover:to-amber-400 text-slate-900 rounded-xl font-black uppercase tracking-widest transition-all shadow-[0_0_25px_rgba(245,158,11,0.5)] active:scale-[0.97]">
+                Awesome! Continue
+            </button>
+            <p class="text-slate-400 text-sm mt-5 font-medium">The winner will be removed from the wheel automatically.</p>
+        </div>
+    </div>
+
+    <!-- ================= JAVASCRIPT LOGIC ================= -->
+    <script>
+        const app = (function() {
+            // --- State Variables ---
+            let pool = [];           // Array of strings (names on wheel)
+            let winners = [];        // Array of { name: string, time: string }
+            let sessions = [];       // Array of { id: number, date: string, winners: [] }
+            let isSpinning = false;
+            let currentRotation = 0; // In radians
+            let pendingWinner = null;
+            let sessionIdCounter = 1;
+
+            // --- UI Elements ---
+            const els = {
+                textarea: document.getElementById('namesTextarea'),
+                poolCount: document.getElementById('poolCountBadge'),
+                loadBtn: document.getElementById('loadBtn'),
+                spinBtn: document.getElementById('spinBtn'),
+                canvas: document.getElementById('wheelCanvas'),
+                ctx: document.getElementById('wheelCanvas').getContext('2d'),
+                winnersList: document.getElementById('currentWinnersList'),
+                winnersCount: document.getElementById('currentWinnersCount'),
+                emptyWinnersMsg: document.getElementById('emptyWinnersMsg'),
+                sessionsContainer: document.getElementById('pastSessionsContainer'),
+                emptySessionsMsg: document.getElementById('emptySessionsMsg'),
+                modal: document.getElementById('winnerModal'),
+                modalContent: document.getElementById('winnerModalContent'),
+                modalName: document.getElementById('modalWinnerName'),
+                toast: document.getElementById('toast'),
+                toastMsg: document.getElementById('toastMsg')
+            };
+
+            // --- Styling configuration ---
+            // Colors inspired by a neon sports aesthetic
+            const colors = [
+                '#10b981', // Emerald
+                '#3b82f6', // Blue
+                '#f59e0b', // Amber
+                '#ec4899', // Pink
+                '#06b6d4', // Cyan
+                '#8b5cf6', // Violet
+                '#84cc16'  // Lime
+            ];
+
+            // --- Initialization ---
+            function init() {
+                // Live count updater
+                els.textarea.addEventListener('input', () => {
+                    const raw = getValidNames(els.textarea.value);
+                    els.poolCount.textContent = raw.length;
+                });
+
+                // Canvas resize observer
+                window.addEventListener('resize', () => {
+                    if (!isSpinning) resizeCanvasAndDraw();
+                });
+
+                // Initial draw (empty state)
+                resizeCanvasAndDraw();
+            }
+
+            // --- Custom Toast Message ---
+            function showToast(msg) {
+                els.toastMsg.textContent = msg;
+                els.toast.classList.remove('opacity-0', 'pointer-events-none');
+                els.toast.classList.add('toast-enter');
+                
+                setTimeout(() => {
+                    els.toast.classList.add('opacity-0', 'pointer-events-none');
+                    els.toast.classList.remove('toast-enter');
+                }, 3000);
+            }
+
+            // --- Helper Methods ---
+            function getValidNames(text) {
+                return text.split('\n').map(n => n.trim()).filter(n => n.length > 0);
+            }
+
+            function easeOutQuart(t) {
+                return 1 - (--t) * t * t * t;
+            }
+
+            function getCurrentTimeStr() {
+                return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            }
+
+            function getCurrentDateStr() {
+                return new Date().toLocaleString([], { 
+                    year: 'numeric', month: 'short', day: 'numeric', 
+                    hour: '2-digit', minute: '2-digit' 
+                });
+            }
+
+            // --- Action: Load Names ---
+            function loadNames() {
+                if (isSpinning) return;
+
+                const rawNames = getValidNames(els.textarea.value);
+                if (rawNames.length === 0) {
+                    showToast("Please paste at least one name.");
+                    return;
+                }
+
+                pool = [...rawNames];
+                currentRotation = 0; // Reset wheel position
+                
+                // Visual Button Feedback
+                const originalHtml = els.loadBtn.innerHTML;
+                els.loadBtn.innerHTML = "Names Loaded!";
+                els.loadBtn.classList.add('from-emerald-500', 'to-green-500');
+                
+                setTimeout(() => {
+                    els.loadBtn.innerHTML = originalHtml;
+                    els.loadBtn.classList.remove('from-emerald-500', 'to-green-500');
+                }, 1000);
+
+                updateAppUI();
+                resizeCanvasAndDraw();
+            }
+
+            // --- Action: Spin ---
+            function spin() {
+                if (isSpinning || pool.length === 0) return;
+
+                isSpinning = true;
+                updateAppUI(); // Locks buttons immediately
+
+                // Calculate spin dynamics (4s to 6.5s)
+                const spinDuration = 4000 + Math.random() * 2500; 
+                const fullRotations = (6 + Math.floor(Math.random() * 6)) * Math.PI * 2;
+                const extraOffset = Math.random() * Math.PI * 2;
+                const targetRotation = currentRotation + fullRotations + extraOffset;
+                
+                const startRotation = currentRotation;
+                const startTime = performance.now();
+
+                function animate(currentTime) {
+                    const elapsed = currentTime - startTime;
+                    const progress = Math.min(elapsed / spinDuration, 1);
+                    const easedProgress = easeOutQuart(progress);
+                    
+                    currentRotation = startRotation + (targetRotation - startRotation) * easedProgress;
+                    drawWheel();
+
+                    if (progress < 1) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        calculateAndShowWinner();
+                    }
+                }
+                
+                requestAnimationFrame(animate);
+            }
+
+            // --- Winner Calculation & Display ---
+            function calculateAndShowWinner() {
+                const sliceAngle = (2 * Math.PI) / pool.length;
+                const normalizedRotation = currentRotation % (2 * Math.PI);
+                
+                // Canvas 0 is right. Pointer is top (1.5 * PI). Reverse rotation to find slice under pointer.
+                let pointerAngle = (1.5 * Math.PI - normalizedRotation) % (2 * Math.PI);
+                if (pointerAngle < 0) pointerAngle += 2 * Math.PI;
+
+                const winnerIndex = Math.floor(pointerAngle / sliceAngle);
+                pendingWinner = pool[winnerIndex];
+
+                // Show Modal
+                els.modalName.textContent = pendingWinner;
+                els.modal.classList.remove('opacity-0', 'pointer-events-none');
+                els.modalContent.classList.add('modal-enter-active');
+                
+                fireConfetti();
+            }
+
+            // --- Action: Post-Win Logic (CRITICAL) ---
+            function closeWinnerModal() {
+                els.modal.classList.add('opacity-0', 'pointer-events-none');
+                els.modalContent.classList.remove('modal-enter-active');
+
+                if (pendingWinner) {
+                    // 1. Add winner to current history WITH timestamp
+                    winners.unshift({
+                        name: pendingWinner,
+                        time: getCurrentTimeStr()
+                    });
+
+                    // 2. Remove winner from active pool array
+                    const idx = pool.indexOf(pendingWinner);
+                    if (idx > -1) pool.splice(idx, 1);
+
+                    // 3. Sync pool array back to textarea UI
+                    els.textarea.value = pool.join('\n');
+                    els.poolCount.textContent = pool.length;
+                    
+                    // 4. Update UI & clear state
+                    renderWinnersList();
+                    pendingWinner = null;
+                    resizeCanvasAndDraw();
+                }
+
+                // 5. Unlock the app so spin can happen again immediately
+                isSpinning = false;
+                updateAppUI();
+            }
+
+            // --- Action: Session Management ---
+            function saveSession() {
+                if (isSpinning || winners.length === 0) {
+                    if(winners.length === 0) showToast("No winners to save in this session.");
+                    return;
+                }
+
+                // Push to past sessions memory
+                sessions.unshift({
+                    id: sessionIdCounter++,
+                    date: getCurrentDateStr(),
+                    winners: [...winners]
+                });
+
+                // Clear current session
+                winners = [];
+                pool = [];
+                els.textarea.value = '';
+                els.poolCount.textContent = '0';
+                currentRotation = 0;
+
+                // Update UI visually
+                renderWinnersList();
+                renderSessionsList();
+                resizeCanvasAndDraw();
+                updateAppUI();
+                
+                showToast("Session Saved Successfully!");
+            }
+
+            // Action: Delete Specific Session
+            function deleteSession(id, event) {
+                event.stopPropagation(); // Prevent accordion from toggling
+                
+                sessions = sessions.filter(s => s.id !== id);
+                renderSessionsList();
+                showToast("Session History Removed");
+            }
+
+            // --- UI Rendering logic ---
+            function updateAppUI() {
+                els.loadBtn.disabled = isSpinning;
+                els.spinBtn.disabled = isSpinning || pool.length === 0;
+                
+                if (pool.length === 0) {
+                    els.spinBtn.innerHTML = "ADD NAMES TO SPIN";
+                    els.spinBtn.classList.remove('text-4xl');
+                    els.spinBtn.classList.add('text-xl');
+                } else {
+                    els.spinBtn.innerHTML = isSpinning ? "SPINNING..." : "SPIN!";
+                    els.spinBtn.classList.add('text-4xl');
+                    els.spinBtn.classList.remove('text-xl');
+                }
+            }
+
+            function renderWinnersList() {
+                els.winnersCount.textContent = winners.length;
+
+                if (winners.length > 0) {
+                    els.emptyWinnersMsg.style.display = 'none';
+                } else {
+                    els.emptyWinnersMsg.style.display = 'block';
+                    els.winnersList.innerHTML = '<li class="text-center text-slate-500 text-sm mt-8 italic font-medium" id="emptyWinnersMsg">No winners drawn yet.</li>';
+                    return;
+                }
+
+                els.winnersList.innerHTML = '';
+                winners.forEach((w, index) => {
+                    const drawNum = winners.length - index;
+                    const li = document.createElement('li');
+                    li.className = 'flex flex-col bg-slate-800 p-3 rounded-lg border border-slate-700/80 shadow-sm';
+                    li.innerHTML = `
+                        <div class="flex justify-between items-start mb-1">
+                            <span class="font-bold text-slate-100 truncate pr-2 text-base">${w.name}</span>
+                            <div class="flex-shrink-0 bg-emerald-500/20 text-emerald-400 text-xs font-bold px-2 py-0.5 rounded border border-emerald-500/30">
+                                #${drawNum}
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1 text-xs text-slate-400 font-medium">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            ${w.time}
+                        </div>
+                    `;
+                    els.winnersList.appendChild(li);
+                });
+            }
+
+            function renderSessionsList() {
+                if (sessions.length > 0) {
+                    els.emptySessionsMsg.style.display = 'none';
+                } else {
+                    els.emptySessionsMsg.style.display = 'block';
+                    els.sessionsContainer.innerHTML = '<div class="text-center text-slate-500 text-sm mt-4 italic font-medium" id="emptySessionsMsg">No saved sessions yet.</div>';
+                    return;
+                }
+
+                els.sessionsContainer.innerHTML = '';
+                
+                sessions.forEach((session) => {
+                    const contentId = `session-content-${session.id}`;
+                    const div = document.createElement('div');
+                    div.className = 'bg-slate-900 rounded-xl border border-slate-700/60 overflow-hidden';
+                    
+                    const listHTML = session.winners.map((w, idx) => 
+                        `<li class="flex justify-between items-center text-sm py-2 border-b border-slate-800 last:border-0">
+                            <div class="flex flex-col">
+                                <span class="text-slate-200 font-bold truncate">${w.name}</span>
+                                <span class="text-xs text-slate-500">${w.time}</span>
+                            </div>
+                            <span class="text-slate-400 text-xs font-bold bg-slate-800 px-2 py-1 rounded">#${session.winners.length - idx}</span>
+                        </li>`
+                    ).join('');
+
+                    div.innerHTML = `
+                        <div class="flex items-stretch border-b border-slate-800/50">
+                            <button onclick="document.getElementById('${contentId}').classList.toggle('hidden')" class="flex-grow text-left p-3 hover:bg-slate-800 transition-colors focus:outline-none flex flex-col">
+                                <span class="font-bold text-cyan-400 text-sm">Session ${session.id}</span>
+                                <span class="text-xs text-slate-400 font-medium">${session.date} • ${session.winners.length} winners</span>
+                            </button>
+                            <button onclick="app.deleteSession(${session.id}, event)" class="px-4 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors flex items-center justify-center border-l border-slate-800/50" title="Delete Session">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
+                        <div id="${contentId}" class="hidden bg-slate-950/80 px-4 py-1">
+                            <ul>${listHTML}</ul>
+                        </div>
+                    `;
+                    els.sessionsContainer.appendChild(div);
+                });
+            }
+
+            // --- Canvas Drawing Logic ---
+            function resizeCanvasAndDraw() {
+                const parent = els.canvas.parentElement;
+                const size = Math.min(parent.clientWidth, parent.clientHeight);
+                const dpr = window.devicePixelRatio || 1;
+                
+                els.canvas.width = size * dpr;
+                els.canvas.height = size * dpr;
+                els.ctx.scale(dpr, dpr);
+                els.canvas.style.width = `${size}px`;
+                els.canvas.style.height = `${size}px`;
+
+                drawWheel();
+            }
+
+            function drawWheel() {
+                const w = els.canvas.clientWidth;
+                const h = els.canvas.clientHeight;
+                const cx = w / 2;
+                const cy = h / 2;
+                const radius = Math.min(cx, cy) - 5;
+
+                els.ctx.clearRect(0, 0, w, h);
+
+                // Draw Empty State
+                if (pool.length === 0) {
+                    els.ctx.beginPath();
+                    els.ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
+                    els.ctx.fillStyle = '#1e293b'; 
+                    els.ctx.fill();
+                    
+                    els.ctx.strokeStyle = '#334155'; 
+                    els.ctx.lineWidth = 10;
+                    els.ctx.stroke();
+                    
+                    els.ctx.fillStyle = '#64748b'; 
+                    els.ctx.textAlign = 'center';
+                    els.ctx.textBaseline = 'middle';
+                    els.ctx.font = 'bold 22px Inter, sans-serif';
+                    els.ctx.fillText('AWAITING PLAYERS', cx, cy);
+                    return;
+                }
+
+                // Draw Active Wheel
+                const numSlices = pool.length;
+                const sliceAngle = (2 * Math.PI) / numSlices;
+
+                els.ctx.save();
+                els.ctx.translate(cx, cy);
+                els.ctx.rotate(currentRotation);
+
+                for (let i = 0; i < numSlices; i++) {
+                    const startAngle = i * sliceAngle;
+                    const endAngle = startAngle + sliceAngle;
+
+                    // Slice Shape
+                    els.ctx.beginPath();
+                    els.ctx.moveTo(0, 0);
+                    els.ctx.arc(0, 0, radius, startAngle, endAngle);
+                    els.ctx.closePath();
+
+                    let colorIndex = i % colors.length;
+                    if (i === numSlices - 1 && numSlices % colors.length === 1 && numSlices > 1) {
+                        colorIndex = (colorIndex + 1) % colors.length;
+                    }
+                    
+                    els.ctx.fillStyle = colors[colorIndex];
+                    els.ctx.fill();
+                    
+                    els.ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+                    els.ctx.lineWidth = 1;
+                    els.ctx.stroke();
+
+                    // Text
+                    els.ctx.save();
+                    els.ctx.rotate(startAngle + (sliceAngle / 2));
+                    els.ctx.textAlign = 'right';
+                    els.ctx.textBaseline = 'middle';
+                    els.ctx.fillStyle = '#ffffff';
+                    
+                    const arcLength = radius * sliceAngle;
+                    const fontSize = Math.max(12, Math.min(32, arcLength * 0.55));
+                    els.ctx.font = `900 ${fontSize}px Inter, sans-serif`;
+                    
+                    els.ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+                    els.ctx.shadowBlur = 5;
+                    els.ctx.shadowOffsetX = 1;
+                    els.ctx.shadowOffsetY = 1;
+
+                    const textX = radius - 20; 
+                    const maxWidth = radius - 65; 
+                    
+                    els.ctx.fillText(pool[i], textX, 0, maxWidth);
+                    els.ctx.restore();
+                }
+
+                els.ctx.restore();
+
+                // Outer Rim
+                els.ctx.beginPath();
+                els.ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
+                els.ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                els.ctx.lineWidth = 6;
+                els.ctx.stroke();
+            }
+
+            // --- Confetti Effect ---
+            function fireConfetti() {
+                var duration = 3000;
+                var end = Date.now() + duration;
+
+                (function frame() {
+                    confetti({
+                        particleCount: 6,
+                        angle: 60,
+                        spread: 55,
+                        origin: { x: 0 },
+                        colors: ['#facc15', '#10b981', '#3b82f6', '#ec4899']
+                    });
+                    confetti({
+                        particleCount: 6,
+                        angle: 120,
+                        spread: 55,
+                        origin: { x: 1 },
+                        colors: ['#facc15', '#10b981', '#3b82f6', '#ec4899']
+                    });
+
+                    if (Date.now() < end) requestAnimationFrame(frame);
+                }());
+            }
+
+            // Expose public API
+            return {
+                init,
+                loadNames,
+                spin,
+                closeWinnerModal,
+                saveSession,
+                deleteSession
+            };
+        })();
+
+        // Boot up the application
+        app.init();
+    </script>
+</body>
+</html>
